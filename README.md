@@ -20,7 +20,7 @@ wintoast.exe - compiled from https://github.com/mohabouje/WinToast or found in t
 
 ## How to install and use
 
-* Download source and compile using gcc (written for MinGW), or download the binary.
+* Download source and compile using gcc (written for MinGW, see make.bat), or download the binary
 * Optional: download or compile wintoast.exe (required for popup notifications)
 * Place both executables anywhere you like (program files is an excellent choice)
 * Optional: Set up the application to start with Windows
