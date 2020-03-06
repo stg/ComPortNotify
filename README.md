@@ -23,9 +23,9 @@ wintoast.exe - compiled from https://github.com/mohabouje/WinToast or found in t
 * Download source and compile using gcc (written for MinGW, see make.bat), or download the binary
 * Optional: download or compile wintoast.exe (required for popup notifications)
 * Place both executables anywhere you like (program files is an excellent choice)
-* Optional: Set up the application to start with Windows
-  See https://support.microsoft.com/en-us/help/4026268/windows-10-change-startup-apps
-  Or add the application to HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run
+* Optional: Set up the application to start with Windows  
+  Add to HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run  
+  Or follow https://support.microsoft.com/en-us/help/4026268/windows-10-change-startup-apps
 * Run the program
 * Optional: Set up the notification icon to always be displayed
 * Right click the icon for a chronological list of connected ports (new at top)
