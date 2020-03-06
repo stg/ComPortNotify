@@ -18,6 +18,19 @@ This program displays pop-ups with port names for newly connected devices and ad
 
 wintoast.exe - compiled from https://github.com/mohabouje/WinToast or found in the "Git for Windows" package.
 
+## TODO
+
+This application is very simple and convers my basic needs only.  
+  
+Ideas for improvement:
+
+* Support for other operating systems
+* Chronological list displays time of connection
+* Remember and display disconnected ports, with timeout before removal
+* Display additional port information
+* Directly launch serial terminal or other application by clicking
+* Configuration (removed device timeout, notification timeout, terminal application, start with windows, etc.)
+
 ## How to install and use
 
 * Download source and compile using gcc (written for MinGW, see make.bat), or download the binary
