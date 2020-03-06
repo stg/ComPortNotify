@@ -1,24 +1,24 @@
 Detects & displays serial ports connected or removed from your Windows system.
 
-Why:
+## Why
 
 I work frequently with serial ports (Arduino, Teensy, FTDI, custom boards).
 I always have several ports connected at once, and during some projects I may have 10 or more ports available.
 When connecting new devices, a recurring problem is not knowing which port was assigned to my newly connected device, as it may or may not have been connected before.
 This program displays pop-ups with port names for newly connected devices and additionally displays a chronologically sorted list of all connected ports.
 
-Features:
+## Features
 
 * Uses very little RAM
 * No background CPU use (no polling - uses device list update notifications)
 * Does not interfere with other applications (does not open or otherwise touch the ports)
 * Discrete UI (goes in notification area, discrete Windows 10 style icon)
 
-External requirements (if you want notifications):
+## External requirements (if you want notifications)
 
 wintoast.exe - compiled from https://github.com/mohabouje/WinToast or found in the "Git for Windows" package.
 
-How to use:
+## How to install and use
 
 * Download source and compile using gcc (written for MinGW), or download the binary.
 * Optional: download or compile wintoast.exe (required for popup notifications)
