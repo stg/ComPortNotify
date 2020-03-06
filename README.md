@@ -27,6 +27,7 @@ wintoast.exe - compiled from https://github.com/mohabouje/WinToast or found in t
   Add to HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run  
   Or follow https://support.microsoft.com/en-us/help/4026268/windows-10-change-startup-apps
 * Run the program
-* Optional: Set up the notification icon to always be displayed
+* Optional: Set up the notification icon to always be displayed  
+  Follow https://support.microsoft.com/en-us/help/30031/windows-10-customize-taskbar-notification-area
 * Right click the icon for a chronological list of connected ports (new at top)
 * If wintoast.exe is available, connect a device with a serial port and notice the popup
