@@ -11,7 +11,7 @@ extern "C" {
 
 // enumerate serial devices
 // fp_enum is callback to receive each device
-void senum(void (*fp_enum)(char *name,char *device));
+void senum(void (*fp_enum)(char *name,char *device,char *hwid));
 
 // open serial port
 // device has system dependant form

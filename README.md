@@ -20,10 +20,9 @@ This program displays pop-ups with port names for newly connected devices and ad
 * Uses **very little RAM** (slim, native C executable)
 * Does not interfere with other applications (does not open or otherwise touch the ports)
 * Discrete UI (goes in notification area, discrete Windows 10/11 style icon)
-
-## External requirements (if you want notifications)
-
-wintoast.exe - compiled from https://github.com/mohabouje/WinToast or found in the "Git for Windows" package.
+* Chronological list with relative timestamps (newest on top)
+* Disconnected port tracking with configurable hide/timeout
+* Sub-menus to get COM ports and hardware IDs to clipboard
 
 ## TODO
 
@@ -32,22 +31,16 @@ This application is very simple and convers my basic needs only.
 Ideas for improvement:
 
 * Support for other operating systems
-* Chronological list displays time of connection
-* Remember and display disconnected ports, with timeout before removal
 * Display additional port information
 * Directly launch serial terminal or other application by clicking
-* Configuration (removed device timeout, notification timeout, terminal application, start with windows, etc.)
+* More configuration options
 
 ## How to install and use
 
-* Download source and compile using gcc (written for MinGW; tested with MSYS2 UCRT64; ensure gcc is on PATH; see make.bat), or download the binary
-* Optional: download or compile wintoast.exe (required for popup notifications)
+* Download source and compile using gcc (tested with MSYS2 UCRT64; ensure gcc is on PATH; see make.bat), or download the binary
 * Place both executables anywhere you like (program files is an excellent choice)
-* Optional: Set up the application to start with Windows  
-  Add to HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run  
-  Or follow https://support.microsoft.com/en-us/help/4026268/windows-10-change-startup-apps
 * Run the program
 * Optional: Set up the notification icon to always be displayed  
   Follow https://support.microsoft.com/en-us/help/30031/windows-10-customize-taskbar-notification-area
 * Right click the icon for a chronological list of connected ports (new at top)
-* If wintoast.exe is available, connect a device with a serial port and notice the popup
+* Use Settings to control Notification mode, disconnected port behavior, and start-with-Windows
