@@ -1,4 +1,11 @@
 Detects & displays serial ports connected or removed from your Windows system.
+Small Windows tray app that shows which COM port was assigned when a USB serial device connects or disconnects.
+
+## Who this helps
+
+* Developers working with Arduino, Teensy, FTDI, and similar serial devices
+* Labs or workshops with many boards connected at once
+* Larger projects where multiple serial endpoints are active and port numbers shift
 
 ## Why
 
@@ -9,10 +16,10 @@ This program displays pop-ups with port names for newly connected devices and ad
 
 ## Features
 
-* Uses very little RAM
-* No background CPU use (no polling - uses device list update notifications)
+* **Zero** background CPU use (no polling - uses device list update notifications)
+* Uses **very little RAM** (slim, native C executable)
 * Does not interfere with other applications (does not open or otherwise touch the ports)
-* Discrete UI (goes in notification area, discrete Windows 10 style icon)
+* Discrete UI (goes in notification area, discrete Windows 10/11 style icon)
 
 ## External requirements (if you want notifications)
 
@@ -33,7 +40,7 @@ Ideas for improvement:
 
 ## How to install and use
 
-* Download source and compile using gcc (written for MinGW, see make.bat), or download the binary
+* Download source and compile using gcc (written for MinGW; tested with MSYS2 UCRT64; ensure gcc is on PATH; see make.bat), or download the binary
 * Optional: download or compile wintoast.exe (required for popup notifications)
 * Place both executables anywhere you like (program files is an excellent choice)
 * Optional: Set up the application to start with Windows  

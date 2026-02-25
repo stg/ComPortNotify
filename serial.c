@@ -35,16 +35,15 @@ BOOL RegQueryValueString(HKEY kKey, char *lpValueName, char **pszValue) {
   DWORD dwAllocatedSize = dwDataSize + 1;
   *pszValue = malloc(dwAllocatedSize); 
   if(!*pszValue) return false;
-  *pszValue[0] = 0;
+  (*pszValue)[0] = 0;
   DWORD dwReturnedSize = dwAllocatedSize;
   nError = RegQueryValueEx(kKey, lpValueName, NULL, &dwType, *pszValue, &dwReturnedSize);
-  if(nError != ERROR_SUCCESS) {
+  if(nError != ERROR_SUCCESS || dwReturnedSize >= dwAllocatedSize) {
     free(*pszValue);
     *pszValue = NULL;
     return false;
   }
-  if(dwReturnedSize >= dwAllocatedSize) return false;
-  if((*pszValue)[dwReturnedSize - 1] != 0) (*pszValue)[dwReturnedSize] = 0;
+  if(dwReturnedSize == 0 || (*pszValue)[dwReturnedSize - 1] != 0) (*pszValue)[dwReturnedSize] = 0;
   return true;
 }
   
@@ -89,12 +88,17 @@ void senum(void (*fp_enum)(char *name, char *device)) {
 
   // Allocate the needed memory
   void *pGuids = malloc(dwGuids * sizeof(GUID));
+  if(!pGuids) return;
 
   // Call the function again
-  if (!SetupDiClassGuidsFromName("Ports", pGuids, dwGuids, &dwGuids)) return;
+  if (!SetupDiClassGuidsFromName("Ports", pGuids, dwGuids, &dwGuids)) {
+    free(pGuids);
+    return;
+  }
 
   // Now create a "device information set" which is required to enumerate all the ports
   h_devinfo = SetupDiGetClassDevs(pGuids, NULL, NULL, DIGCF_PRESENT);
+  free(pGuids);
   if(h_devinfo == INVALID_HANDLE_VALUE) return;
 
   // Finally do the enumeration
@@ -111,11 +115,13 @@ void senum(void (*fp_enum)(char *name, char *device)) {
       // Get the registry key which stores the ports settings
       HKEY hDeviceKey = SetupDiOpenDevRegKey(h_devinfo, &devInfo, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_QUERY_VALUE);
       int nPort = 0;
-      char szPortName[8];
+      char szPortName[9];
       if (hDeviceKey != INVALID_HANDLE_VALUE) {
         if (QueryRegistryPortName(hDeviceKey, &nPort)) {
           bAdded = true;
-          sprintf(szPortName, "COM%u:", nPort);
+          if (snprintf(szPortName, sizeof(szPortName), "COM%u:", nPort) >= (int)sizeof(szPortName)) {
+            bAdded = false;
+          }
         }
         // Close the key now that we are finished with it
         RegCloseKey(hDeviceKey);
@@ -223,6 +229,7 @@ bool sopen(char* device) {
   			if(device[3]>='1'&&device[3]<='9') {
   				// ..try alternate format (\\.\comN)
   				char *dev=malloc(strlen(device)+5);
+				if(!dev) return false;
   				strcpy(dev,"\\\\.\\com");
   				strcat(dev,device+3);
   				h_serial=CreateFile(dev,GENERIC_READ|GENERIC_WRITE,0,0,OPEN_EXISTING,0,0);

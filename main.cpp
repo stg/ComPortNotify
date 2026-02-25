@@ -7,9 +7,12 @@
 char * mpprintf(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
-	size_t needed = vsnprintf(NULL, 0, fmt, args) + 1;
+    va_list args2;
+    va_copy(args2, args);
+	size_t needed = vsnprintf(NULL, 0, fmt, args2) + 1;
+    va_end(args2);
     char * buffer = (char *)malloc(needed);
-    if(buffer) vsprintf(buffer, fmt, args);
+    if(buffer) vsnprintf(buffer, needed, fmt, args);
     va_end(args);
 	return buffer;
 }
@@ -56,16 +59,25 @@ lport_t * volatile ports, * _ports;
 // Add new port to linked list
 void add_lport(char *name, char *device) {
 	lport_t * temp = (lport_t *)malloc(sizeof(lport_t));
+	char *dev = (char *)malloc(strlen(device) + 1);
+	char *nam = (char *)malloc(strlen(name) + 1);
+	if(!temp || !dev || !nam) {
+		if(nam) free(nam);
+		if(dev) free(dev);
+		if(temp) free(temp);
+		return;
+	}
 	ZeroMemory(temp, sizeof(lport_t));
-	if(_ports) temp->next = _ports;
+	strcpy(dev, device);
+	strcpy(nam, name);
+	temp->device = dev;
+	temp->name = nam;
+	temp->next = _ports;
 	_ports = temp;
-	_ports->device = (char *)malloc(strlen(device));
-	strcpy(_ports->device, device);
-	_ports->name = (char *)malloc(strlen(name));
-	strcpy(_ports->name, name);  
 }
 
 // Show notification (each instance runs in its own thread)
+// Assumes lpParam is heap-allocated and will free it
 DWORD WINAPI NotifyThread( LPVOID lpParam ) {
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
@@ -73,6 +85,10 @@ DWORD WINAPI NotifyThread( LPVOID lpParam ) {
 	
 	// Generate command line
 	szCommand = mpprintf("wintoast --appname \"%s\" --aumi \"DSp.Tools.CPNotify.1\" --image \"toast.png\" --expirems 1 --text \"%s\"",  szClassName, lpParam);
+	if(!szCommand) {
+		free(lpParam);
+		return 0;
+	}
 	
 	// Set up structs
 	ZeroMemory( &si, sizeof(si) );
@@ -80,7 +96,7 @@ DWORD WINAPI NotifyThread( LPVOID lpParam ) {
     ZeroMemory( &pi, sizeof(pi) );
 
     // Start the child process. 
-    if( !CreateProcess( NULL,   // No module name (use command line)
+    if( CreateProcess( NULL,   // No module name (use command line)
         szCommand,        // Command line
         NULL,           // Process handle not inheritable
         NULL,           // Thread handle not inheritable
@@ -90,8 +106,12 @@ DWORD WINAPI NotifyThread( LPVOID lpParam ) {
         NULL,           // Use parent's starting directory 
         &si,            // Pointer to STARTUPINFO structure
         &pi )           // Pointer to PROCESS_INFORMATION structure
-    ) 
-	
+    ) {
+        // Close handles if CreateProcess succeeded
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+    }
+
 	// Free up allocated memory
 	free(szCommand);
 	free(lpParam);
@@ -116,10 +136,18 @@ void refresh_ports(bool init = false) {
 			}
 			if(!b) {
 				char * text = mpprintf("Removed %s %s\n", a->device, a->name);
+				if(!text) {
+					a = a->next;
+					continue;
+				}
 				// Update notification
-				if(!szTooltip[0]) strncpy(szTooltip, text, sizeof(szTooltip));
+				if(!szTooltip[0]) {
+					strncpy(szTooltip, text, sizeof(szTooltip));
+					szTooltip[sizeof(szTooltip) - 1] = '\0';
+				}
 				// Send toast notification
 				//CreateThread(NULL, 0, NotifyThread, text, 0, NULL);
+				free(text);
 			}
 			a = a->next;
 		}
@@ -139,10 +167,22 @@ void refresh_ports(bool init = false) {
 				*/
 			} else {
 				char * text = mpprintf("Connected %s %s\n", a->device, a->name);
+				if(!text) {
+					a = a->next;
+					continue;
+				}
 				// Update notification
-				if(!szTooltip[0]) strncpy(szTooltip, text, sizeof(szTooltip));
+				if(!szTooltip[0]) {
+					strncpy(szTooltip, text, sizeof(szTooltip));
+					szTooltip[sizeof(szTooltip) - 1] = '\0';
+				}
 				// Send toast notification
-				CreateThread(NULL, 0, NotifyThread, text, 0, NULL);
+				HANDLE hThread = CreateThread(NULL, 0, NotifyThread, text, 0, NULL);
+				if(hThread) {
+					CloseHandle(hThread);
+				} else {
+					free(text);
+				}
 				
 			}
 			a = a->next;
@@ -151,6 +191,7 @@ void refresh_ports(bool init = false) {
 
 		if(szTooltip[0]) {
 			strncpy(notifyIconData.szTip, szTooltip, sizeof(notifyIconData.szTip));
+			notifyIconData.szTip[sizeof(notifyIconData.szTip) - 1] = '\0';
 			Shell_NotifyIcon(NIM_MODIFY, &notifyIconData);
 		}
 	}
@@ -166,8 +207,10 @@ void populate_menu() {
 	if(p) {
 		do {
 			char * text = mpprintf("%s %s\n", p->device, p->name);
-			AppendMenu(Hmenu, MF_STRING, ID_TRAY_VOID, TEXT( text ));
-			free(text);
+			if(text) {
+				AppendMenu(Hmenu, MF_STRING, ID_TRAY_VOID, TEXT( text ));
+				free(text);
+			}
 			p = p->next;
 		} while(p);
 	} else {
@@ -236,6 +279,11 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
     NotificationFilter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
     NotificationFilter.dbcc_classguid = WceusbshGUID;
 	HDEVNOTIFY hVolNotify = RegisterDeviceNotification(Hwnd, &NotificationFilter, DEVICE_NOTIFY_WINDOW_HANDLE);
+	if(!hVolNotify) {
+		MessageBox(Hwnd, TEXT("Failed to register for device notifications."), TEXT("ComPortNotify"), MB_OK | MB_ICONERROR);
+		PostQuitMessage(1);
+		die = true;
+	}
     
 	// Make the window visible on the screen
     //ShowWindow(Hwnd, SW_MINIMIZE);
@@ -248,11 +296,14 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
 	
     // Message loop
     while(!die) {
-		if(GetMessage(&messages, NULL, 0, 0)) {
+		int result = GetMessage(&messages, NULL, 0, 0);
+		if(result > 0) {
 			// Translate virtual-key messages into character messages
 			TranslateMessage(&messages);
 			// Send message to WindowProcedure
 			DispatchMessage(&messages);
+		} else if(result < 0) {
+			break;
 		}
     }
 
@@ -386,4 +437,5 @@ void InitNotifyIconData() {
     notifyIconData.uCallbackMessage = WM_SYSICON; // Set up our invented Windows Message
     notifyIconData.hIcon = (HICON)LoadIcon( GetModuleHandle(NULL),      MAKEINTRESOURCE(ICO1) ) ;
     strncpy(notifyIconData.szTip, szTIP, sizeof(notifyIconData.szTip));
+    notifyIconData.szTip[sizeof(notifyIconData.szTip) - 1] = '\0';
 }
