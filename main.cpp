@@ -677,6 +677,7 @@ typedef struct menu_text {
 	char *desc;
 	char *right;
 	bool has_submenu;
+	bool grayed;
 	struct menu_text *next;
 } menu_text_t;
 
@@ -853,6 +854,7 @@ void populate_menu(menu_text_t **allocs, menu_clip_t **clips, UINT *next_id) {
 				mt->desc = desc;
 				mt->right = right ? right : _strdup("");
 				mt->has_submenu = true;
+				mt->grayed = !p->connected;
 				mt->next = *allocs;
 				*allocs = mt;
 				HMENU sub = CreatePopupMenu();
@@ -885,8 +887,9 @@ void populate_menu(menu_text_t **allocs, menu_clip_t **clips, UINT *next_id) {
 				MENUITEMINFOA mii;
 				ZeroMemory(&mii, sizeof(mii));
 				mii.cbSize = sizeof(mii);
-				mii.fMask = MIIM_FTYPE | MIIM_SUBMENU | MIIM_DATA;
+				mii.fMask = MIIM_FTYPE | MIIM_SUBMENU | MIIM_DATA | MIIM_STATE;
 				mii.fType = MFT_OWNERDRAW;
+				mii.fState = MFS_ENABLED;
 				mii.dwItemData = (ULONG_PTR)mt;
 				mii.hSubMenu = sub;
 				InsertMenuItemA(Hmenu, (UINT)-1, TRUE, &mii);
@@ -905,13 +908,15 @@ void populate_menu(menu_text_t **allocs, menu_clip_t **clips, UINT *next_id) {
 			mt->desc = _strdup("No serial ports detected");
 			mt->right = _strdup("");
 			mt->has_submenu = false;
+			mt->grayed = true;
 			mt->next = *allocs;
 			*allocs = mt;
 			MENUITEMINFOA mii;
 			ZeroMemory(&mii, sizeof(mii));
 			mii.cbSize = sizeof(mii);
-			mii.fMask = MIIM_FTYPE | MIIM_DATA;
+			mii.fMask = MIIM_FTYPE | MIIM_DATA | MIIM_STATE;
 			mii.fType = MFT_OWNERDRAW;
+			mii.fState = MFS_DISABLED;
 			mii.dwItemData = (ULONG_PTR)mt;
 			InsertMenuItemA(Hmenu, (UINT)-1, TRUE, &mii);
 		}
@@ -1259,13 +1264,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 				HDC hdc = di->hDC;
 				RECT rc = di->rcItem;
 				bool selected = (di->itemState & ODS_SELECTED) != 0;
-				bool disabled = (di->itemState & ODS_DISABLED) != 0;
 				HBRUSH bg = GetSysColorBrush(selected ? COLOR_HIGHLIGHT : COLOR_MENU);
 				FillRect(hdc, &rc, bg);
 
 				SetBkMode(hdc, TRANSPARENT);
+				const menu_text_t *mt = (const menu_text_t *)di->itemData;
 				COLORREF textColor;
-				if(disabled) {
+				if(mt->grayed) {
 					textColor = GetSysColor(COLOR_GRAYTEXT);
 				} else {
 					textColor = GetSysColor(selected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT);
@@ -1275,7 +1280,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 				HFONT hfont = get_menu_font();
 				HFONT old = hfont ? (HFONT)SelectObject(hdc, hfont) : NULL;
 
-				const menu_text_t *mt = (const menu_text_t *)di->itemData;
 				RECT tx = rc;
 				int checkPad = g_menu_nocheck ? GetSystemMetrics(SM_CXEDGE) : GetSystemMetrics(SM_CXMENUCHECK);
 				int submenuPad = mt->has_submenu ? GetSystemMetrics(SM_CXMENUSIZE) : 0;
@@ -1286,6 +1290,21 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 					RECT px = tx;
 					px.right = px.left + g_menu_prefix_width;
 					DrawTextA(hdc, mt->prefix, -1, &px, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+					if(mt->grayed) {
+						SIZE psz = {0};
+						GetTextExtentPoint32A(hdc, mt->prefix, (int)strlen(mt->prefix), &psz);
+						int y = (px.top + px.bottom) / 2;
+						HPEN pen = CreatePen(PS_SOLID, 1, textColor);
+						HPEN oldPen = pen ? (HPEN)SelectObject(hdc, pen) : NULL;
+						int inset = 0;
+						int x1 = px.left + inset;
+						int x2 = px.left + psz.cx - inset;
+						if(x2 < x1) x2 = x1;
+						MoveToEx(hdc, x1, y, NULL);
+						LineTo(hdc, x2, y);
+						if(oldPen) SelectObject(hdc, oldPen);
+						if(pen) DeleteObject(pen);
+					}
 					tx.left = px.right + 8;
 				}
 				RECT dx = tx;
