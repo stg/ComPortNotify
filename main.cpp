@@ -76,7 +76,6 @@ typedef struct hport {
 } hport_t;
 
 static hport_t *find_hport(const char *device);
-static void remove_hport(hport_t *prev, hport_t *cur);
 static void move_hport_to_head(hport_t *prev, hport_t *cur);
 
 // Toast settings
@@ -611,7 +610,6 @@ void refresh_ports(bool init = false) {
 			a = a->next;
 		}
 
-		hport_t *prev = NULL;
 		hp = history;
 		while(hp) {
 			if(hp->connected && !hp->seen) {
@@ -637,25 +635,6 @@ void refresh_ports(bool init = false) {
 				}
 			}
 
-			int dmode = get_disconnected_mode();
-			int dtimeout = get_disconnected_timeout();
-			bool remove_now = false;
-			if(!hp->connected) {
-				if(dmode == 1) {
-					remove_now = true;
-				} else if(dmode == 2) {
-					if(now - hp->disconnected_at >= dtimeout) remove_now = true;
-				}
-			}
-
-			if(remove_now) {
-				hport_t *next = hp->next;
-				remove_hport(prev, hp);
-				hp = next;
-				continue;
-			}
-
-			prev = hp;
 			hp = hp->next;
 		}
 
@@ -814,16 +793,24 @@ static char *format_time_label(time_t now, time_t t, bool just_now_allowed) {
 }
 
 void populate_menu(menu_text_t **allocs, menu_clip_t **clips, UINT *next_id) {
-	hport_t * p = history;
 	bool any = false;
 	int dmode = get_disconnected_mode();
 	time_t now = time(NULL);
+
+	hport_t * p = history;
 	int just_now_count = 0;
 	hport_t *scan = history;
 	while(scan) {
 		if(!scan->connected && dmode == 1) {
 			scan = scan->next;
 			continue;
+		}
+		if(!scan->connected && dmode == 2) {
+			int dtimeout = get_disconnected_timeout();
+			if(now - scan->disconnected_at >= dtimeout) {
+				scan = scan->next;
+				continue;
+			}
 		}
 		time_t t = scan->connected ? scan->connected_at : scan->disconnected_at;
 		if(t > 0 && difftime(now, t) >= 0 && difftime(now, t) < 30) {
@@ -836,6 +823,13 @@ void populate_menu(menu_text_t **allocs, menu_clip_t **clips, UINT *next_id) {
 		if(!p->connected && dmode == 1) {
 			p = p->next;
 			continue;
+		}
+		if(!p->connected && dmode == 2) {
+			int dtimeout = get_disconnected_timeout();
+			if(now - p->disconnected_at >= dtimeout) {
+				p = p->next;
+				continue;
+			}
 		}
 		any = true;
 		char * prefix = NULL;
@@ -1390,18 +1384,6 @@ static hport_t *find_hport(const char *device) {
 		p = p->next;
 	}
 	return NULL;
-}
-
-static void remove_hport(hport_t *prev, hport_t *cur) {
-	if(prev) {
-		prev->next = cur->next;
-	} else {
-		history = cur->next;
-	}
-	free(cur->device);
-	free(cur->name);
-	free(cur->hwid);
-	free(cur);
 }
 
 static void move_hport_to_head(hport_t *prev, hport_t *cur) {
