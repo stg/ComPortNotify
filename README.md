@@ -1,7 +1,7 @@
 Detects & displays serial ports connected or removed from your Windows system.
 Small Windows tray app that shows which COM port was assigned when a USB serial device connects or disconnects.
 
-![Screenshot](img/screenshot.png)
+<img src="img/screenshot.png" alt="Screenshot" width="640" height="320">
 
 ## Who this helps
 
