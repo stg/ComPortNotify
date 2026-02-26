@@ -1,6 +1,8 @@
 Detects & displays serial ports connected or removed from your Windows system.
 Small Windows tray app that shows which COM port was assigned when a USB serial device connects or disconnects.
 
+![Screenshot](img/screenshot.png)
+
 ## Who this helps
 
 * Developers working with Arduino, Teensy, FTDI, and similar serial devices
